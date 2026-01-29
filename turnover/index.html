@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>TurnOver</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              pacer: {
+                black: '#1a1a1a',
+                gray: '#f5f5f5',
+                darkGray: '#888888',
+                orange: '#ff4d00', // Slightly more aggressive orange for TurnOver
+                text: '#111111'
+              }
+            },
+            fontFamily: {
+              sans: ['Inter', 'sans-serif'],
+            }
+          }
+        }
+      }
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+      body { font-family: 'Inter', sans-serif; -webkit-font-smoothing: antialiased; }
+      /* Hide scrollbar for clean mobile feel */
+      .no-scrollbar::-webkit-scrollbar {
+          display: none;
+      }
+      .no-scrollbar {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+      }
+      .card-stack {
+        perspective: 1000px;
+      }
+      .swipe-card {
+        transition: all 0.3s ease-in-out;
+      }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@^19.2.4",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.4/",
+    "react/": "https://esm.sh/react@^19.2.4/",
+    "@google/genai": "https://esm.sh/@google/genai@^1.38.0",
+    "lucide-react": "https://esm.sh/lucide-react@^0.563.0"
+  }
+}
+</script>
+<link rel="stylesheet" href="/index.css">
+</head>
+  <body class="bg-gray-100 text-pacer-text h-screen overflow-hidden flex justify-center items-center">
+    <div id="root" class="w-full h-full max-w-md bg-white relative overflow-hidden shadow-2xl sm:rounded-3xl sm:h-[90vh] sm:border-4 sm:border-gray-800"></div>
+  <script type="module" src="/index.tsx"></script>
+</body>
+</html>
