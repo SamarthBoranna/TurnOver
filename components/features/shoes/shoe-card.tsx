@@ -3,7 +3,7 @@
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import type { Shoe } from "@/lib/types"
-import { TagPill } from "./tag-pill"
+import { TagPill } from "@/components/shared/tag-pill"
 
 interface ShoeCardProps {
   shoe: Shoe

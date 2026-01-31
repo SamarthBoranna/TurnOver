@@ -12,7 +12,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
-import { RatingStars } from "@/components/rating-stars"
+import { RatingStars } from "@/components/shared/rating-stars"
 import type { RotationShoe } from "@/lib/types"
 
 interface RetireShoeModalProps {

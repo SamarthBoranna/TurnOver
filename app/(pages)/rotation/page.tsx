@@ -2,10 +2,10 @@
 
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
-import { ShoeCard } from "@/components/shoe-card"
-import { AddShoeModal } from "./add-shoe-modal"
-import { RetireShoeModal } from "./retire-shoe-modal"
-import { mockRotation, mockShoes } from "@/lib/mock-data"
+import { ShoeCard } from "@/components/features/shoes/shoe-card"
+import { AddShoeModal } from "@/components/features/rotation/add-shoe-modal"
+import { RetireShoeModal } from "@/components/features/rotation/retire-shoe-modal"
+import { mockRotation, mockShoes } from "@/lib/data/mock-data"
 import type { RotationShoe, Shoe } from "@/lib/types"
 import { Plus, Archive, Filter } from "lucide-react"
 import {

@@ -4,9 +4,9 @@ import { useState } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { RatingStars } from "@/components/rating-stars"
-import { TagPill } from "@/components/tag-pill"
-import { mockGraveyard } from "@/lib/mock-data"
+import { RatingStars } from "@/components/shared/rating-stars"
+import { TagPill } from "@/components/shared/tag-pill"
+import { mockGraveyard } from "@/lib/data/mock-data"
 import { Filter } from "lucide-react"
 import {
   DropdownMenu,

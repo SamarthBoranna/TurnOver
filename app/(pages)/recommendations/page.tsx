@@ -2,9 +2,9 @@
 
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
-import { RecommendationCard } from "@/components/recommendation-card"
-import { mockRecommendations, mockGraveyard } from "@/lib/mock-data"
-import { RatingStars } from "@/components/rating-stars"
+import { RecommendationCard } from "@/components/features/shoes/recommendation-card"
+import { mockRecommendations, mockGraveyard } from "@/lib/data/mock-data"
+import { RatingStars } from "@/components/shared/rating-stars"
 import { Filter, Info } from "lucide-react"
 import {
   DropdownMenu,
@@ -120,7 +120,7 @@ export default function RecommendationsPage() {
         <div className="space-y-4">
           {filteredRecommendations.map((recommendation, index) => (
             <RecommendationCard
-              key={recommendation.shoeId}
+              key={recommendation.shoe.id}
               recommendation={recommendation}
               rank={index + 1}
             />

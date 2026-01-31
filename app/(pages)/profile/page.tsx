@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { mockUser, mockRotation, mockGraveyard } from "@/lib/mock-data"
+import { mockUser, mockRotation, mockGraveyard } from "@/lib/data/mock-data"
 import type { User } from "@/lib/types"
 import { Check, RefreshCw, Archive } from "lucide-react"
 

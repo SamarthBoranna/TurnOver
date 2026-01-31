@@ -1,9 +1,9 @@
 import Link from "next/link"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { ShoeCard } from "@/components/shoe-card"
-import { RecommendationCard } from "@/components/recommendation-card"
-import { mockUser, mockRotation, mockGraveyard, mockRecommendations } from "@/lib/mock-data"
+import { ShoeCard } from "@/components/features/shoes/shoe-card"
+import { RecommendationCard } from "@/components/features/shoes/recommendation-card"
+import { mockUser, mockRotation, mockGraveyard, mockRecommendations } from "@/lib/data/mock-data"
 import { ArrowRight, RefreshCw, Archive, Sparkles, TrendingUp } from "lucide-react"
 
 export default function DashboardPage() {
