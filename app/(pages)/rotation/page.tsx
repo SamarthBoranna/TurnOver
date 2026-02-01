@@ -5,9 +5,9 @@ import { Button } from "@/components/ui/button"
 import { ShoeCard } from "@/components/features/shoes/shoe-card"
 import { AddShoeModal } from "@/components/features/rotation/add-shoe-modal"
 import { RetireShoeModal } from "@/components/features/rotation/retire-shoe-modal"
-import { mockRotation, mockShoes } from "@/lib/data/mock-data"
+import { useRotation, useShoes, useGraveyard } from "@/hooks"
 import type { RotationShoe, Shoe } from "@/lib/types"
-import { Plus, Archive, Filter } from "lucide-react"
+import { Plus, Archive, Filter, Loader2 } from "lucide-react"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -18,35 +18,82 @@ import {
 type CategoryFilter = "all" | "daily" | "workout" | "race"
 
 export default function RotationPage() {
-  const [rotation, setRotation] = useState<RotationShoe[]>(mockRotation)
+  const { rotation, isLoading: rotationLoading, addToRotation, removeFromRotation, refetch: refetchRotation } = useRotation()
+  const { shoes, isLoading: shoesLoading } = useShoes({ page_size: 100 })
+  const { retireShoe, refetch: refetchGraveyard } = useGraveyard()
+  
   const [addModalOpen, setAddModalOpen] = useState(false)
   const [retireModalOpen, setRetireModalOpen] = useState(false)
   const [selectedShoe, setSelectedShoe] = useState<RotationShoe | null>(null)
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>("all")
+  const [isSubmitting, setIsSubmitting] = useState(false)
+
+  // Transform API rotation data to frontend format
+  const transformedRotation: RotationShoe[] = rotation.map(shoe => ({
+    id: shoe.id,
+    brand: shoe.brand,
+    name: shoe.name,
+    category: shoe.category as "daily" | "workout" | "race",
+    tags: shoe.tags as any[],
+    weight: shoe.weight,
+    drop: shoe.drop,
+    stackHeightHeel: shoe.stack_height_heel,
+    stackHeightForefoot: shoe.stack_height_forefoot,
+    imageUrl: shoe.image_url,
+    startDate: shoe.start_date,
+  }))
+
+  // Transform API shoes data to frontend format
+  const transformedShoes: Shoe[] = shoes.map(shoe => ({
+    id: shoe.id,
+    brand: shoe.brand,
+    name: shoe.name,
+    category: shoe.category as "daily" | "workout" | "race",
+    tags: shoe.tags as any[],
+    weight: shoe.weight,
+    drop: shoe.drop,
+    stackHeightHeel: shoe.stack_height_heel,
+    stackHeightForefoot: shoe.stack_height_forefoot,
+    imageUrl: shoe.image_url,
+  }))
 
   // Shoes not in rotation (available to add)
-  const availableShoes = mockShoes.filter(
-    (shoe) => !rotation.some((r) => r.id === shoe.id)
-  )
+  const rotationIds = new Set(rotation.map(s => s.id))
+  const availableShoes = transformedShoes.filter(shoe => !rotationIds.has(shoe.id))
 
-  const filteredRotation = rotation.filter((shoe) =>
+  const filteredRotation = transformedRotation.filter((shoe) =>
     categoryFilter === "all" ? true : shoe.category === categoryFilter
   )
 
-  const handleAddShoe = (shoe: Shoe) => {
-    const newRotationShoe: RotationShoe = {
-      ...shoe,
-      startDate: new Date().toISOString().split("T")[0],
+  const handleAddShoe = async (shoe: Shoe) => {
+    setIsSubmitting(true)
+    try {
+      await addToRotation({ shoe_id: shoe.id })
+      setAddModalOpen(false)
+    } catch (error) {
+      console.error('Failed to add shoe:', error)
+    } finally {
+      setIsSubmitting(false)
     }
-    setRotation([...rotation, newRotationShoe])
-    setAddModalOpen(false)
   }
 
-  const handleRetireShoe = (shoeId: string, rating: number, review: string) => {
-    setRotation(rotation.filter((s) => s.id !== shoeId))
-    setRetireModalOpen(false)
-    setSelectedShoe(null)
-    // In a real app, this would also add to graveyard via API
+  const handleRetireShoe = async (shoeId: string, rating: number, review: string) => {
+    setIsSubmitting(true)
+    try {
+      await retireShoe({
+        shoe_id: shoeId,
+        rating,
+        review: review || undefined,
+      })
+      setRetireModalOpen(false)
+      setSelectedShoe(null)
+      // Refresh both rotation and graveyard
+      await Promise.all([refetchRotation(), refetchGraveyard()])
+    } catch (error) {
+      console.error('Failed to retire shoe:', error)
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   const handleOpenRetireModal = (shoe: RotationShoe) => {
@@ -61,6 +108,8 @@ export default function RotationPage() {
     race: "Race Day",
   }
 
+  const isLoading = rotationLoading || shoesLoading
+
   return (
     <div className="max-w-6xl mx-auto px-6 py-8">
       {/* Header */}
@@ -68,7 +117,13 @@ export default function RotationPage() {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight mb-1">Shoe Rotation</h1>
           <p className="text-muted-foreground">
-            {rotation.length} active {rotation.length === 1 ? "shoe" : "shoes"} in your rotation
+            {rotationLoading ? (
+              <span className="inline-flex items-center gap-2">
+                <Loader2 className="w-4 h-4 animate-spin" /> Loading...
+              </span>
+            ) : (
+              `${rotation.length} active ${rotation.length === 1 ? "shoe" : "shoes"} in your rotation`
+            )}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -91,7 +146,7 @@ export default function RotationPage() {
               ))}
             </DropdownMenuContent>
           </DropdownMenu>
-          <Button size="sm" onClick={() => setAddModalOpen(true)}>
+          <Button size="sm" onClick={() => setAddModalOpen(true)} disabled={isLoading}>
             <Plus className="w-4 h-4 mr-2" />
             Add Shoe
           </Button>
@@ -99,7 +154,11 @@ export default function RotationPage() {
       </div>
 
       {/* Rotation Grid */}
-      {filteredRotation.length === 0 ? (
+      {rotationLoading ? (
+        <div className="flex items-center justify-center py-20">
+          <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+        </div>
+      ) : filteredRotation.length === 0 ? (
         <div className="border border-dashed border-border rounded-lg p-12 text-center">
           <p className="text-muted-foreground mb-4">
             {categoryFilter === "all"
@@ -130,6 +189,7 @@ export default function RotationPage() {
                   size="sm"
                   onClick={() => handleOpenRetireModal(shoe)}
                   className="text-muted-foreground hover:text-foreground"
+                  disabled={isSubmitting}
                 >
                   <Archive className="w-4 h-4 mr-1" />
                   Retire
@@ -146,6 +206,7 @@ export default function RotationPage() {
         onOpenChange={setAddModalOpen}
         availableShoes={availableShoes}
         onAddShoe={handleAddShoe}
+        isLoading={shoesLoading || isSubmitting}
       />
 
       {selectedShoe && (
@@ -154,6 +215,7 @@ export default function RotationPage() {
           onOpenChange={setRetireModalOpen}
           shoe={selectedShoe}
           onRetire={handleRetireShoe}
+          isLoading={isSubmitting}
         />
       )}
     </div>

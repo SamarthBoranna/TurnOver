@@ -1,13 +1,13 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { RatingStars } from "@/components/shared/rating-stars"
 import { TagPill } from "@/components/shared/tag-pill"
-import { mockGraveyard } from "@/lib/data/mock-data"
-import { Filter } from "lucide-react"
+import { useGraveyard } from "@/hooks"
+import { Filter, Loader2 } from "lucide-react"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -16,9 +16,10 @@ import {
 } from "@/components/ui/dropdown-menu"
 
 type CategoryFilter = "all" | "daily" | "workout" | "race"
-type SortOption = "rating" | "name" | "brand"
+type SortOption = "rating" | "name" | "brand" | "retired_at"
 
 export default function GraveyardPage() {
+  const { graveyard, isLoading } = useGraveyard()
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>("all")
   const [sortBy, setSortBy] = useState<SortOption>("rating")
 
@@ -33,20 +34,35 @@ export default function GraveyardPage() {
     rating: "Highest Rated",
     name: "Name",
     brand: "Brand",
+    retired_at: "Most Recent",
   }
 
-  const filteredGraveyard = mockGraveyard
-    .filter((shoe) =>
+  // Transform and sort graveyard data
+  const filteredGraveyard = useMemo(() => {
+    let filtered = graveyard.filter((shoe) =>
       categoryFilter === "all" ? true : shoe.category === categoryFilter
     )
-    .sort((a, b) => {
-      if (sortBy === "rating") return b.rating - a.rating
-      if (sortBy === "name") return a.name.localeCompare(b.name)
-      return a.brand.localeCompare(b.brand)
-    })
 
-  const averageRating =
-    mockGraveyard.reduce((sum, shoe) => sum + shoe.rating, 0) / mockGraveyard.length
+    return filtered.sort((a, b) => {
+      switch (sortBy) {
+        case "rating":
+          return b.rating - a.rating
+        case "name":
+          return a.name.localeCompare(b.name)
+        case "brand":
+          return a.brand.localeCompare(b.brand)
+        case "retired_at":
+          return new Date(b.retired_at).getTime() - new Date(a.retired_at).getTime()
+        default:
+          return 0
+      }
+    })
+  }, [graveyard, categoryFilter, sortBy])
+
+  const averageRating = useMemo(() => {
+    if (graveyard.length === 0) return 0
+    return graveyard.reduce((sum, shoe) => sum + shoe.rating, 0) / graveyard.length
+  }, [graveyard])
 
   return (
     <div className="max-w-6xl mx-auto px-6 py-8">
@@ -55,7 +71,13 @@ export default function GraveyardPage() {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight mb-1">Shoe Graveyard</h1>
           <p className="text-muted-foreground">
-            {mockGraveyard.length} retired {mockGraveyard.length === 1 ? "shoe" : "shoes"} · {averageRating.toFixed(1)} avg rating
+            {isLoading ? (
+              <span className="inline-flex items-center gap-2">
+                <Loader2 className="w-4 h-4 animate-spin" /> Loading...
+              </span>
+            ) : (
+              `${graveyard.length} retired ${graveyard.length === 1 ? "shoe" : "shoes"} · ${averageRating.toFixed(1)} avg rating`
+            )}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -100,7 +122,11 @@ export default function GraveyardPage() {
       </div>
 
       {/* Graveyard Grid */}
-      {filteredGraveyard.length === 0 ? (
+      {isLoading ? (
+        <div className="flex items-center justify-center py-20">
+          <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+        </div>
+      ) : filteredGraveyard.length === 0 ? (
         <div className="border border-dashed border-border rounded-lg p-12 text-center">
           <p className="text-muted-foreground">
             {categoryFilter === "all"
@@ -113,9 +139,17 @@ export default function GraveyardPage() {
           {filteredGraveyard.map((shoe) => (
             <Card key={shoe.id} className="overflow-hidden border border-border">
               <div className="bg-muted h-40 flex items-center justify-center">
-                <div className="text-muted-foreground text-sm">
-                  {shoe.brand} {shoe.name}
-                </div>
+                {shoe.image_url ? (
+                  <img 
+                    src={shoe.image_url} 
+                    alt={`${shoe.brand} ${shoe.name}`}
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <div className="text-muted-foreground text-sm">
+                    {shoe.brand} {shoe.name}
+                  </div>
+                )}
               </div>
               <CardContent className="p-5">
                 <div className="flex items-start justify-between gap-3 mb-3">
@@ -150,6 +184,17 @@ export default function GraveyardPage() {
                     </p>
                   </div>
                 )}
+
+                <div className="border-t border-border pt-3 mt-3">
+                  <p className="text-xs text-muted-foreground">
+                    Retired {new Date(shoe.retired_at).toLocaleDateString("en-US", {
+                      month: "short",
+                      day: "numeric",
+                      year: "numeric",
+                    })}
+                    {shoe.miles_run && ` · ${shoe.miles_run} miles`}
+                  </p>
+                </div>
               </CardContent>
             </Card>
           ))}

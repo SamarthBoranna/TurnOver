@@ -38,8 +38,8 @@ class ShoeResponse(BaseModel):
     id: str
     brand: str
     name: str
-    category: ShoeCategory
-    tags: List[ShoeTag]
+    category: str  # Stored as string in DB
+    tags: List[str]  # Stored as text[] in DB, accept strings
     weight: float
     drop: float
     stack_height_heel: float

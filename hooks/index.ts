@@ -1,7 +1,6 @@
 // Custom hooks barrel export
-// Add custom hooks here as the application grows
-
-// Example hooks that could be added:
-// export { useShoes } from './use-shoes'
-// export { useUser } from './use-user'
-// export { useRecommendations } from './use-recommendations'
+export { useRotation } from './use-rotation'
+export { useGraveyard } from './use-graveyard'
+export { useRecommendations, useSimilarShoes } from './use-recommendations'
+export { useShoes } from './use-shoes'
+export { useUserProfile, useUserStats } from './use-user-profile'

@@ -1,8 +1,31 @@
+"use client"
+
 import Link from "next/link"
+import { useRouter } from "next/navigation"
+import { useEffect } from "react"
 import { Button } from "@/components/ui/button"
-import { RotateCcw, ArrowRight, RefreshCw, Archive, Sparkles, ChevronRight } from "lucide-react"
+import { useAuth } from "@/lib/auth"
+import { RotateCcw, ArrowRight, RefreshCw, Archive, Sparkles, ChevronRight, Loader2 } from "lucide-react"
 
 export default function LandingPage() {
+  const { isAuthenticated, isLoading } = useAuth()
+  const router = useRouter()
+
+  // Redirect authenticated users to dashboard
+  useEffect(() => {
+    if (!isLoading && isAuthenticated) {
+      router.push('/dashboard')
+    }
+  }, [isAuthenticated, isLoading, router])
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -13,11 +36,11 @@ export default function LandingPage() {
             <span className="font-semibold text-lg tracking-tight">TurnOver</span>
           </div>
           <div className="flex items-center gap-4">
-            <Link href="/dashboard" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+            <Link href="/login" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
               Sign In
             </Link>
             <Button asChild size="sm">
-              <Link href="/dashboard">Get Started</Link>
+              <Link href="/signup">Get Started</Link>
             </Button>
           </div>
         </div>
@@ -37,7 +60,7 @@ export default function LandingPage() {
             </p>
             <div className="flex flex-col sm:flex-row gap-4">
               <Button asChild size="lg" className="text-base">
-                <Link href="/dashboard">
+                <Link href="/signup">
                   Start Tracking
                   <ArrowRight className="ml-2 w-4 h-4" />
                 </Link>
@@ -131,7 +154,7 @@ export default function LandingPage() {
             Join runners who make smarter shoe choices based on their own experience.
           </p>
           <Button asChild size="lg" className="text-base">
-            <Link href="/dashboard">
+            <Link href="/signup">
               Get Started Free
               <ChevronRight className="ml-1 w-4 h-4" />
             </Link>

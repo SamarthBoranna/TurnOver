@@ -1,9 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query
-from typing import Optional, List
+from typing import Optional, List, Tuple
 from datetime import datetime
-from gotrue.types import User
+from supabase_auth.types import User
+from supabase import Client
 
-from app.core.auth import get_current_user
+from app.core.auth import get_current_user_with_client
 from app.core.supabase import supabase_admin
 from app.schemas.shoe import RotationShoeCreate, RotationShoeResponse
 from app.schemas.common import ApiResponse
@@ -15,14 +16,16 @@ router = APIRouter()
 @router.get("", response_model=ApiResponse[List[RotationShoeResponse]])
 async def get_rotation(
     category: Optional[ShoeCategory] = None,
-    current_user: User = Depends(get_current_user)
+    auth: Tuple[User, Client] = Depends(get_current_user_with_client)
 ):
     """
     Get all shoes in the current user's rotation.
     """
+    current_user, db = auth
+    
     try:
         # Join rotation with shoes table to get full shoe details
-        query = supabase_admin.table("rotation").select(
+        query = db.table("rotation").select(
             "*, shoes(*)"
         ).eq("user_id", current_user.id)
         
@@ -65,13 +68,15 @@ async def get_rotation(
 @router.post("", response_model=ApiResponse[RotationShoeResponse], status_code=status.HTTP_201_CREATED)
 async def add_to_rotation(
     rotation_shoe: RotationShoeCreate,
-    current_user: User = Depends(get_current_user)
+    auth: Tuple[User, Client] = Depends(get_current_user_with_client)
 ):
     """
     Add a shoe to the current user's rotation.
     """
+    current_user, db = auth
+    
     try:
-        # Check if shoe exists
+        # Check if shoe exists (use admin client for public shoe data)
         shoe_response = supabase_admin.table("shoes").select("*").eq(
             "id", rotation_shoe.shoe_id
         ).single().execute()
@@ -82,8 +87,8 @@ async def add_to_rotation(
                 detail="Shoe not found"
             )
         
-        # Check if shoe is already in rotation
-        existing = supabase_admin.table("rotation").select("id").eq(
+        # Check if shoe is already in rotation (user context)
+        existing = db.table("rotation").select("id").eq(
             "user_id", current_user.id
         ).eq("shoe_id", rotation_shoe.shoe_id).execute()
         
@@ -93,14 +98,14 @@ async def add_to_rotation(
                 detail="Shoe is already in your rotation"
             )
         
-        # Add to rotation
+        # Add to rotation (user context for RLS)
         rotation_data = {
             "user_id": current_user.id,
             "shoe_id": rotation_shoe.shoe_id,
             "start_date": (rotation_shoe.start_date or datetime.utcnow()).isoformat(),
         }
         
-        response = supabase_admin.table("rotation").insert(rotation_data).execute()
+        response = db.table("rotation").insert(rotation_data).execute()
         
         if not response.data:
             raise HTTPException(
@@ -140,13 +145,15 @@ async def add_to_rotation(
 @router.delete("/{shoe_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def remove_from_rotation(
     shoe_id: str,
-    current_user: User = Depends(get_current_user)
+    auth: Tuple[User, Client] = Depends(get_current_user_with_client)
 ):
     """
     Remove a shoe from the current user's rotation (without retiring it).
     """
+    current_user, db = auth
+    
     try:
-        response = supabase_admin.table("rotation").delete().eq(
+        response = db.table("rotation").delete().eq(
             "user_id", current_user.id
         ).eq("shoe_id", shoe_id).execute()
         

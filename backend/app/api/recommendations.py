@@ -1,13 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query
-from typing import Optional, List
-from gotrue.types import User
+from typing import Optional, List, Tuple
+from supabase_auth.types import User
+from supabase import Client
 
-from app.core.auth import get_current_user
+from app.core.auth import get_current_user_with_client, get_current_user
 from app.core.supabase import supabase_admin
-from app.schemas.shoe import ShoeResponse
 from app.schemas.common import ApiResponse
 from app.models.shoe import ShoeCategory
-from app.models.recommendation import Recommendation, RecommendationResponse
+from app.models.recommendation import Recommendation, RecommendationResponse, RecommendedShoe
 
 router = APIRouter()
 
@@ -84,22 +84,24 @@ def calculate_recommendation_score(
 async def get_recommendations(
     category: Optional[ShoeCategory] = None,
     limit: int = Query(default=5, ge=1, le=20),
-    current_user: User = Depends(get_current_user)
+    auth: Tuple[User, Client] = Depends(get_current_user_with_client)
 ):
     """
     Get personalized shoe recommendations based on user's graveyard ratings
     and preferences.
     """
+    current_user, db = auth
+    
     try:
         # Fetch user profile for preferences
-        profile_response = supabase_admin.table("profiles").select("*").eq(
+        profile_response = db.table("profiles").select("*").eq(
             "user_id", current_user.id
         ).single().execute()
         
         user_preferences = profile_response.data or {}
         
         # Fetch user's top-rated shoes from graveyard
-        graveyard_response = supabase_admin.table("graveyard").select(
+        graveyard_response = db.table("graveyard").select(
             "*, shoes(*)"
         ).eq("user_id", current_user.id).gte("rating", 4).order(
             "rating", desc=True
@@ -110,11 +112,11 @@ async def get_recommendations(
         ]
         
         # Get shoes not in user's rotation or graveyard
-        rotation_response = supabase_admin.table("rotation").select(
+        rotation_response = db.table("rotation").select(
             "shoe_id"
         ).eq("user_id", current_user.id).execute()
         
-        graveyard_ids_response = supabase_admin.table("graveyard").select(
+        graveyard_ids_response = db.table("graveyard").select(
             "shoe_id"
         ).eq("user_id", current_user.id).execute()
         
@@ -146,7 +148,7 @@ async def get_recommendations(
             
             if score > 0.1:  # Only include shoes with meaningful scores
                 recommendations.append(Recommendation(
-                    shoe=ShoeResponse(**shoe),
+                    shoe=RecommendedShoe(**shoe),
                     score=score,
                     explanation=explanation
                 ))
@@ -226,7 +228,7 @@ async def get_similar_shoes(
                     explanation = f"Similar {reference_category} shoe"
                 
                 similar_shoes.append(Recommendation(
-                    shoe=ShoeResponse(**shoe),
+                    shoe=RecommendedShoe(**shoe),
                     score=round(score, 2),
                     explanation=explanation
                 ))

@@ -39,12 +39,15 @@ backend/
 │   │   ├── shoe.py          # Shoe schemas
 │   │   ├── user.py          # User schemas
 │   │   └── common.py        # Common response schemas
+│   ├── scripts/             # Utility scripts
+│   │   └── seed_database.py # Database seeding script
 │   └── main.py              # FastAPI application
 ├── supabase/
 │   ├── migrations/          # SQL migration files
 │   │   └── 001_initial_schema.sql
-│   └── seed.sql             # Seed data
+│   └── seed.sql             # Seed data (SQL version)
 ├── tests/                   # Test files
+├── .env.example             # Example environment variables
 ├── requirements.txt         # Python dependencies
 ├── pyproject.toml           # Project configuration
 └── README.md
@@ -59,18 +62,27 @@ backend/
 
 ### 2. Set Up the Database
 
-Run the migration SQL in your Supabase SQL Editor:
+#### Option A: Using Supabase Dashboard (Recommended for first-time setup)
+
+1. **Run the migration** - Copy the contents of `supabase/migrations/001_initial_schema.sql` and run it in Supabase Dashboard > SQL Editor
+2. **Seed the data** - Copy the contents of `supabase/seed.sql` and run it in Supabase Dashboard > SQL Editor
+
+#### Option B: Using the Python Seeding Script
+
+After setting up environment variables (step 3), you can use the Python script:
 
 ```bash
-# Copy the contents of supabase/migrations/001_initial_schema.sql
-# and run it in Supabase Dashboard > SQL Editor
-```
+# Verify connection
+python -m app.scripts.seed_database --verify
 
-Then seed the database with initial shoe data:
+# Seed the database
+python -m app.scripts.seed_database
 
-```bash
-# Copy the contents of supabase/seed.sql
-# and run it in Supabase Dashboard > SQL Editor
+# Clear and reseed
+python -m app.scripts.seed_database --clear
+
+# View statistics
+python -m app.scripts.seed_database --stats
 ```
 
 ### 3. Configure Environment Variables
@@ -80,8 +92,8 @@ Create a `.env` file in the `backend/` directory:
 ```bash
 # Supabase Configuration
 SUPABASE_URL=https://your-project-ref.supabase.co
-SUPABASE_KEY=your-anon-key
-SUPABASE_SERVICE_KEY=your-service-role-key
+SUPABASE_KEY=your-publishable-key
+SUPABASE_SERVICE_KEY=your-secret-key  # Note: Does NOT bypass RLS
 
 # Optional
 JWT_SECRET=your-jwt-secret
@@ -89,16 +101,10 @@ DEBUG=false
 CORS_ORIGINS=["http://localhost:3000"]
 ```
 
+> **Note on RLS**: The new Supabase secret key does not bypass Row Level Security. 
+> The backend passes user authentication context to Supabase so RLS policies work correctly.
+
 ### 4. Install Dependencies
-
-Using pip:
-
-```bash
-cd backend
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-pip install -r requirements.txt
-```
 
 Using uv (recommended):
 
@@ -107,6 +113,15 @@ cd backend
 uv venv
 source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 uv pip install -r requirements.txt
+```
+
+Using pip (alternative):
+
+```bash
+cd backend
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+pip install -r requirements.txt
 ```
 
 ### 5. Run the Server
