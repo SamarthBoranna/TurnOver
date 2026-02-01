@@ -11,13 +11,14 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import type { Shoe } from "@/lib/types"
-import { Search, Plus } from "lucide-react"
+import { Search, Plus, Loader2 } from "lucide-react"
 
 interface AddShoeModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   availableShoes: Shoe[]
   onAddShoe: (shoe: Shoe) => void
+  isLoading?: boolean
 }
 
 export function AddShoeModal({
@@ -25,9 +26,11 @@ export function AddShoeModal({
   onOpenChange,
   availableShoes,
   onAddShoe,
+  isLoading = false,
 }: AddShoeModalProps) {
   const [search, setSearch] = useState("")
   const [categoryFilter, setCategoryFilter] = useState<string>("all")
+  const [addingShoeId, setAddingShoeId] = useState<string | null>(null)
 
   const filteredShoes = availableShoes.filter((shoe) => {
     const matchesSearch =
@@ -42,6 +45,15 @@ export function AddShoeModal({
     daily: "Daily",
     workout: "Workout",
     race: "Race",
+  }
+
+  const handleAddShoe = async (shoe: Shoe) => {
+    setAddingShoeId(shoe.id)
+    try {
+      await onAddShoe(shoe)
+    } finally {
+      setAddingShoeId(null)
+    }
   }
 
   return (
@@ -85,9 +97,15 @@ export function AddShoeModal({
 
         {/* Shoe List */}
         <div className="flex-1 overflow-y-auto -mx-6 px-6">
-          {filteredShoes.length === 0 ? (
+          {isLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : filteredShoes.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
-              No shoes found matching your search.
+              {availableShoes.length === 0 
+                ? "All available shoes are already in your rotation."
+                : "No shoes found matching your search."}
             </div>
           ) : (
             <div className="space-y-2">
@@ -96,8 +114,16 @@ export function AddShoeModal({
                   key={shoe.id}
                   className="flex items-center gap-4 p-4 rounded-lg border border-border hover:border-foreground/20 transition-colors"
                 >
-                  <div className="w-16 h-16 bg-muted rounded-lg flex items-center justify-center text-xs text-muted-foreground shrink-0">
-                    {shoe.brand}
+                  <div className="w-16 h-16 bg-muted rounded-lg flex items-center justify-center text-xs text-muted-foreground shrink-0 overflow-hidden">
+                    {shoe.imageUrl ? (
+                      <img 
+                        src={shoe.imageUrl} 
+                        alt={shoe.brand}
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      shoe.brand
+                    )}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
@@ -110,9 +136,19 @@ export function AddShoeModal({
                       {shoe.brand} · {shoe.weight}g · {shoe.drop}mm drop
                     </p>
                   </div>
-                  <Button size="sm" onClick={() => onAddShoe(shoe)}>
-                    <Plus className="w-4 h-4 mr-1" />
-                    Add
+                  <Button 
+                    size="sm" 
+                    onClick={() => handleAddShoe(shoe)}
+                    disabled={addingShoeId !== null}
+                  >
+                    {addingShoeId === shoe.id ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <>
+                        <Plus className="w-4 h-4 mr-1" />
+                        Add
+                      </>
+                    )}
                   </Button>
                 </div>
               ))}

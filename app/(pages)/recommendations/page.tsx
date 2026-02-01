@@ -1,11 +1,11 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { RecommendationCard } from "@/components/features/shoes/recommendation-card"
-import { mockRecommendations, mockGraveyard } from "@/lib/data/mock-data"
 import { RatingStars } from "@/components/shared/rating-stars"
-import { Filter, Info } from "lucide-react"
+import { useRecommendations, useGraveyard, useShoes } from "@/hooks"
+import { Filter, Info, Loader2 } from "lucide-react"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -23,6 +23,15 @@ type CategoryFilter = "all" | "daily" | "workout" | "race"
 
 export default function RecommendationsPage() {
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>("all")
+  
+  const { 
+    recommendations, 
+    basedOnShoes, 
+    isLoading: recommendationsLoading 
+  } = useRecommendations(categoryFilter === "all" ? undefined : categoryFilter, 10)
+  
+  const { graveyard, isLoading: graveyardLoading } = useGraveyard()
+  const { shoes, isLoading: shoesLoading } = useShoes()
 
   const categoryLabel = {
     all: "All Categories",
@@ -31,9 +40,35 @@ export default function RecommendationsPage() {
     race: "Race Day",
   }
 
-  const filteredRecommendations = mockRecommendations.filter((rec) =>
-    categoryFilter === "all" ? true : rec.shoe.category === categoryFilter
-  )
+  // Transform recommendations for the frontend
+  const transformedRecommendations = useMemo(() => {
+    return recommendations.map(rec => ({
+      shoe: {
+        id: rec.shoe.id,
+        brand: rec.shoe.brand,
+        name: rec.shoe.name,
+        category: rec.shoe.category as "daily" | "workout" | "race",
+        tags: rec.shoe.tags as any[],
+        weight: rec.shoe.weight,
+        drop: rec.shoe.drop,
+        stackHeightHeel: rec.shoe.stack_height_heel,
+        stackHeightForefoot: rec.shoe.stack_height_forefoot,
+        imageUrl: rec.shoe.image_url,
+      },
+      score: rec.score,
+      explanation: rec.explanation,
+    }))
+  }, [recommendations])
+
+  // Get top-rated shoes from graveyard that recommendations are based on
+  const topRatedShoes = useMemo(() => {
+    return graveyard
+      .filter(shoe => shoe.rating >= 4)
+      .sort((a, b) => b.rating - a.rating)
+      .slice(0, 3)
+  }, [graveyard])
+
+  const isLoading = recommendationsLoading || graveyardLoading
 
   return (
     <div className="max-w-6xl mx-auto px-6 py-8">
@@ -59,7 +94,13 @@ export default function RecommendationsPage() {
             </TooltipProvider>
           </div>
           <p className="text-muted-foreground">
-            {filteredRecommendations.length} {filteredRecommendations.length === 1 ? "shoe" : "shoes"} picked for you
+            {isLoading ? (
+              <span className="inline-flex items-center gap-2">
+                <Loader2 className="w-4 h-4 animate-spin" /> Loading...
+              </span>
+            ) : (
+              `${transformedRecommendations.length} ${transformedRecommendations.length === 1 ? "shoe" : "shoes"} picked for you`
+            )}
           </p>
         </div>
         <DropdownMenu>
@@ -84,16 +125,22 @@ export default function RecommendationsPage() {
       </div>
 
       {/* Based On Section */}
-      <div className="mb-8 p-4 bg-secondary/30 rounded-lg border border-border">
-        <p className="text-sm font-medium mb-3">Based on your top-rated shoes:</p>
-        <div className="flex flex-wrap gap-4">
-          {mockGraveyard
-            .filter((shoe) => shoe.rating >= 4)
-            .slice(0, 3)
-            .map((shoe) => (
+      {!graveyardLoading && topRatedShoes.length > 0 && (
+        <div className="mb-8 p-4 bg-secondary/30 rounded-lg border border-border">
+          <p className="text-sm font-medium mb-3">Based on your top-rated shoes:</p>
+          <div className="flex flex-wrap gap-4">
+            {topRatedShoes.map((shoe) => (
               <div key={shoe.id} className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-muted rounded flex items-center justify-center text-xs text-muted-foreground">
-                  {shoe.brand.slice(0, 2)}
+                <div className="w-10 h-10 bg-muted rounded flex items-center justify-center text-xs text-muted-foreground overflow-hidden">
+                  {shoe.image_url ? (
+                    <img 
+                      src={shoe.image_url} 
+                      alt={shoe.brand}
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    shoe.brand.slice(0, 2)
+                  )}
                 </div>
                 <div>
                   <p className="text-sm font-medium">{shoe.name}</p>
@@ -101,11 +148,16 @@ export default function RecommendationsPage() {
                 </div>
               </div>
             ))}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Recommendations */}
-      {filteredRecommendations.length === 0 ? (
+      {isLoading ? (
+        <div className="flex items-center justify-center py-20">
+          <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+        </div>
+      ) : transformedRecommendations.length === 0 ? (
         <div className="border border-dashed border-border rounded-lg p-12 text-center">
           <p className="text-muted-foreground mb-2">
             {categoryFilter === "all"
@@ -118,7 +170,7 @@ export default function RecommendationsPage() {
         </div>
       ) : (
         <div className="space-y-4">
-          {filteredRecommendations.map((recommendation, index) => (
+          {transformedRecommendations.map((recommendation, index) => (
             <RecommendationCard
               key={recommendation.shoe.id}
               recommendation={recommendation}

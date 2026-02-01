@@ -1,4 +1,7 @@
+"use client"
+
 import { Navigation } from "@/components/layout/navigation"
+import { ProtectedRoute } from "@/components/auth/protected-route"
 
 export default function AppLayout({
   children,
@@ -6,9 +9,11 @@ export default function AppLayout({
   children: React.ReactNode
 }) {
   return (
-    <div className="min-h-screen bg-background">
-      <Navigation />
-      <main>{children}</main>
-    </div>
+    <ProtectedRoute>
+      <div className="min-h-screen bg-background">
+        <Navigation />
+        <main>{children}</main>
+      </div>
+    </ProtectedRoute>
   )
 }

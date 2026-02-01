@@ -1,9 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query
-from typing import Optional, List
+from typing import Optional, List, Tuple
 from datetime import datetime
-from gotrue.types import User
+from supabase_auth.types import User
+from supabase import Client
 
-from app.core.auth import get_current_user
+from app.core.auth import get_current_user_with_client
 from app.core.supabase import supabase_admin
 from app.schemas.shoe import RetiredShoeCreate, RetiredShoeResponse
 from app.schemas.common import ApiResponse
@@ -18,14 +19,16 @@ async def get_graveyard(
     min_rating: Optional[int] = Query(None, ge=1, le=5),
     sort_by: Optional[str] = Query("retired_at", regex="^(retired_at|rating|name|brand)$"),
     sort_order: Optional[str] = Query("desc", regex="^(asc|desc)$"),
-    current_user: User = Depends(get_current_user)
+    auth: Tuple[User, Client] = Depends(get_current_user_with_client)
 ):
     """
     Get all shoes in the current user's graveyard (retired shoes).
     """
+    current_user, db = auth
+    
     try:
         # Join graveyard with shoes table to get full shoe details
-        query = supabase_admin.table("graveyard").select(
+        query = db.table("graveyard").select(
             "*, shoes(*)"
         ).eq("user_id", current_user.id)
         
@@ -81,14 +84,16 @@ async def get_graveyard(
 @router.post("", response_model=ApiResponse[RetiredShoeResponse], status_code=status.HTTP_201_CREATED)
 async def retire_shoe(
     retired_shoe: RetiredShoeCreate,
-    current_user: User = Depends(get_current_user)
+    auth: Tuple[User, Client] = Depends(get_current_user_with_client)
 ):
     """
     Retire a shoe - moves it from rotation to graveyard with a rating.
     """
+    current_user, db = auth
+    
     try:
         # Check if shoe exists in user's rotation
-        rotation_response = supabase_admin.table("rotation").select(
+        rotation_response = db.table("rotation").select(
             "*, shoes(*)"
         ).eq("user_id", current_user.id).eq("shoe_id", retired_shoe.shoe_id).single().execute()
         
@@ -101,7 +106,7 @@ async def retire_shoe(
         shoe_data = rotation_response.data.get("shoes", {})
         
         # Check if shoe is already in graveyard
-        existing = supabase_admin.table("graveyard").select("id").eq(
+        existing = db.table("graveyard").select("id").eq(
             "user_id", current_user.id
         ).eq("shoe_id", retired_shoe.shoe_id).execute()
         
@@ -121,7 +126,7 @@ async def retire_shoe(
             "miles_run": retired_shoe.miles_run,
         }
         
-        graveyard_response = supabase_admin.table("graveyard").insert(graveyard_data).execute()
+        graveyard_response = db.table("graveyard").insert(graveyard_data).execute()
         
         if not graveyard_response.data:
             raise HTTPException(
@@ -130,7 +135,7 @@ async def retire_shoe(
             )
         
         # Remove from rotation
-        supabase_admin.table("rotation").delete().eq(
+        db.table("rotation").delete().eq(
             "user_id", current_user.id
         ).eq("shoe_id", retired_shoe.shoe_id).execute()
         
@@ -171,11 +176,13 @@ async def update_retired_shoe(
     rating: Optional[int] = Query(None, ge=1, le=5),
     review: Optional[str] = None,
     miles_run: Optional[float] = Query(None, ge=0),
-    current_user: User = Depends(get_current_user)
+    auth: Tuple[User, Client] = Depends(get_current_user_with_client)
 ):
     """
     Update a retired shoe's rating, review, or miles.
     """
+    current_user, db = auth
+    
     try:
         update_data = {}
         if rating is not None:
@@ -191,7 +198,7 @@ async def update_retired_shoe(
                 detail="No fields to update"
             )
         
-        response = supabase_admin.table("graveyard").update(update_data).eq(
+        response = db.table("graveyard").update(update_data).eq(
             "user_id", current_user.id
         ).eq("shoe_id", shoe_id).execute()
         
@@ -202,7 +209,7 @@ async def update_retired_shoe(
             )
         
         # Fetch full shoe data
-        full_response = supabase_admin.table("graveyard").select(
+        full_response = db.table("graveyard").select(
             "*, shoes(*)"
         ).eq("user_id", current_user.id).eq("shoe_id", shoe_id).single().execute()
         
@@ -243,13 +250,15 @@ async def update_retired_shoe(
 @router.delete("/{shoe_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_from_graveyard(
     shoe_id: str,
-    current_user: User = Depends(get_current_user)
+    auth: Tuple[User, Client] = Depends(get_current_user_with_client)
 ):
     """
     Remove a shoe from the graveyard permanently.
     """
+    current_user, db = auth
+    
     try:
-        response = supabase_admin.table("graveyard").delete().eq(
+        response = db.table("graveyard").delete().eq(
             "user_id", current_user.id
         ).eq("shoe_id", shoe_id).execute()
         

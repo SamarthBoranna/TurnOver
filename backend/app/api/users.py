@@ -1,7 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from gotrue.types import User
+from typing import Tuple
+from supabase_auth.types import User
+from supabase import Client
 
-from app.core.auth import get_current_user
+from app.core.auth import get_current_user_with_client
 from app.core.supabase import supabase_admin
 from app.schemas.user import UserProfileResponse, UserProfileUpdate
 from app.schemas.common import ApiResponse
@@ -10,12 +12,16 @@ router = APIRouter()
 
 
 @router.get("/me", response_model=ApiResponse[UserProfileResponse])
-async def get_current_user_profile(current_user: User = Depends(get_current_user)):
+async def get_current_user_profile(
+    auth: Tuple[User, Client] = Depends(get_current_user_with_client)
+):
     """
     Get the current authenticated user's profile.
     """
+    current_user, db = auth
+    
     try:
-        response = supabase_admin.table("profiles").select("*").eq(
+        response = db.table("profiles").select("*").eq(
             "user_id", current_user.id
         ).single().execute()
         
@@ -40,11 +46,13 @@ async def get_current_user_profile(current_user: User = Depends(get_current_user
 @router.patch("/me", response_model=ApiResponse[UserProfileResponse])
 async def update_current_user_profile(
     profile_update: UserProfileUpdate,
-    current_user: User = Depends(get_current_user)
+    auth: Tuple[User, Client] = Depends(get_current_user_with_client)
 ):
     """
     Update the current authenticated user's profile.
     """
+    current_user, db = auth
+    
     try:
         update_data = profile_update.model_dump(exclude_unset=True)
         
@@ -54,7 +62,7 @@ async def update_current_user_profile(
                 detail="No fields to update"
             )
         
-        response = supabase_admin.table("profiles").update(update_data).eq(
+        response = db.table("profiles").update(update_data).eq(
             "user_id", current_user.id
         ).execute()
         
@@ -82,12 +90,14 @@ async def update_current_user_profile(
 @router.get("/{user_id}/stats")
 async def get_user_stats(
     user_id: str,
-    current_user: User = Depends(get_current_user)
+    auth: Tuple[User, Client] = Depends(get_current_user_with_client)
 ):
     """
     Get user's shoe statistics.
     Only accessible by the user themselves.
     """
+    current_user, db = auth
+    
     if current_user.id != user_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -96,12 +106,12 @@ async def get_user_stats(
     
     try:
         # Count rotation shoes
-        rotation_count = supabase_admin.table("rotation").select(
+        rotation_count = db.table("rotation").select(
             "id", count="exact"
         ).eq("user_id", user_id).execute()
         
         # Count graveyard shoes
-        graveyard_response = supabase_admin.table("graveyard").select(
+        graveyard_response = db.table("graveyard").select(
             "id, rating"
         ).eq("user_id", user_id).execute()
         

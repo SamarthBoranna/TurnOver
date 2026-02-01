@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from typing import Optional, List
-from gotrue.types import User
+from supabase_auth.types import User
 
 from app.core.auth import get_current_user, get_optional_user
 from app.core.supabase import supabase_admin

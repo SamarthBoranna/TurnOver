@@ -23,10 +23,18 @@ export function RecommendationCard({ recommendation, rank }: RecommendationCardP
   return (
     <Card className="overflow-hidden border border-border hover:border-foreground/20 transition-colors">
       <div className="flex flex-col md:flex-row">
-        <div className="bg-muted flex items-center justify-center h-48 md:h-auto md:w-56 shrink-0 relative">
-          <div className="text-muted-foreground text-sm">
-            {shoe.brand} {shoe.name}
-          </div>
+        <div className="bg-muted flex items-center justify-center h-48 md:h-auto md:w-56 shrink-0 relative overflow-hidden">
+          {shoe.imageUrl ? (
+            <img 
+              src={shoe.imageUrl} 
+              alt={`${shoe.brand} ${shoe.name}`}
+              className="h-full w-full object-cover"
+            />
+          ) : (
+            <div className="text-muted-foreground text-sm">
+              {shoe.brand} {shoe.name}
+            </div>
+          )}
           <div className="absolute top-3 left-3 w-8 h-8 rounded-full bg-foreground text-background flex items-center justify-center text-sm font-semibold">
             {rank}
           </div>

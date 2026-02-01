@@ -20,10 +20,18 @@ export function ShoeCard({ shoe, children, compact = false }: ShoeCardProps) {
 
   return (
     <Card className="overflow-hidden border border-border hover:border-foreground/20 transition-colors">
-      <div className={`bg-muted flex items-center justify-center ${compact ? "h-32" : "h-48"}`}>
-        <div className="text-muted-foreground text-sm">
-          {shoe.brand} {shoe.name}
-        </div>
+      <div className={`bg-muted flex items-center justify-center ${compact ? "h-32" : "h-48"} overflow-hidden`}>
+        {shoe.imageUrl ? (
+          <img 
+            src={shoe.imageUrl} 
+            alt={`${shoe.brand} ${shoe.name}`}
+            className="h-full w-full object-cover"
+          />
+        ) : (
+          <div className="text-muted-foreground text-sm">
+            {shoe.brand} {shoe.name}
+          </div>
+        )}
       </div>
       <CardContent className={compact ? "p-4" : "p-6"}>
         <div className="flex items-start justify-between gap-4 mb-3">

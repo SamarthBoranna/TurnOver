@@ -13,18 +13,33 @@ class ShoeCategory(str, Enum):
 
 class ShoeTag(str, Enum):
     """Shoe characteristic tags"""
+    # Core cushioning characteristics
     CUSHIONED = "cushioned"
-    RESPONSIVE = "responsive"
-    LIGHTWEIGHT = "lightweight"
-    STABLE = "stable"
-    NEUTRAL = "neutral"
     PLUSH = "plush"
     FIRM = "firm"
+    
+    # Performance characteristics
+    RESPONSIVE = "responsive"
+    FAST = "fast"
+    LIGHTWEIGHT = "lightweight"
+    
+    # Stability characteristics
+    STABLE = "stable"
+    NEUTRAL = "neutral"
+    
+    # Comfort characteristics
+    COMFORTABLE = "comfortable"
     BREATHABLE = "breathable"
+    
+    # Durability and versatility
     DURABLE = "durable"
     VERSATILE = "versatile"
-    FAST = "fast"
-    COMFORTABLE = "comfortable"
+    
+    # Additional characteristics
+    BOUNCY = "bouncy"
+    SNAPPY = "snappy"
+    PROTECTIVE = "protective"
+    FLEXIBLE = "flexible"
 
 
 class ShoeBase(BaseModel):

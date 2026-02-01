@@ -14,12 +14,14 @@ import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { RatingStars } from "@/components/shared/rating-stars"
 import type { RotationShoe } from "@/lib/types"
+import { Loader2 } from "lucide-react"
 
 interface RetireShoeModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   shoe: RotationShoe
-  onRetire: (shoeId: string, rating: number, review: string) => void
+  onRetire: (shoeId: string, rating: number, review: string) => void | Promise<void>
+  isLoading?: boolean
 }
 
 export function RetireShoeModal({
@@ -27,15 +29,22 @@ export function RetireShoeModal({
   onOpenChange,
   shoe,
   onRetire,
+  isLoading = false,
 }: RetireShoeModalProps) {
   const [rating, setRating] = useState(0)
   const [review, setReview] = useState("")
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (rating === 0) return
-    onRetire(shoe.id, rating, review)
-    setRating(0)
-    setReview("")
+    setIsSubmitting(true)
+    try {
+      await onRetire(shoe.id, rating, review)
+      setRating(0)
+      setReview("")
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   const handleClose = (open: boolean) => {
@@ -45,6 +54,8 @@ export function RetireShoeModal({
     }
     onOpenChange(open)
   }
+
+  const submitting = isLoading || isSubmitting
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -59,8 +70,16 @@ export function RetireShoeModal({
         <div className="py-4 space-y-6">
           {/* Shoe Preview */}
           <div className="flex items-center gap-4 p-4 bg-secondary/50 rounded-lg">
-            <div className="w-16 h-16 bg-muted rounded-lg flex items-center justify-center text-xs text-muted-foreground">
-              {shoe.brand}
+            <div className="w-16 h-16 bg-muted rounded-lg flex items-center justify-center text-xs text-muted-foreground overflow-hidden">
+              {shoe.imageUrl ? (
+                <img 
+                  src={shoe.imageUrl} 
+                  alt={shoe.brand}
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                shoe.brand
+              )}
             </div>
             <div>
               <p className="font-medium">{shoe.name}</p>
@@ -97,16 +116,24 @@ export function RetireShoeModal({
               value={review}
               onChange={(e) => setReview(e.target.value)}
               rows={3}
+              disabled={submitting}
             />
           </div>
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => handleClose(false)}>
+          <Button variant="outline" onClick={() => handleClose(false)} disabled={submitting}>
             Cancel
           </Button>
-          <Button onClick={handleSubmit} disabled={rating === 0}>
-            Retire Shoe
+          <Button onClick={handleSubmit} disabled={rating === 0 || submitting}>
+            {submitting ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Retiring...
+              </>
+            ) : (
+              "Retire Shoe"
+            )}
           </Button>
         </DialogFooter>
       </DialogContent>

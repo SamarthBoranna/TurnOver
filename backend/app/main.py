@@ -38,9 +38,23 @@ async def root():
 
 @app.get("/health", tags=["Health"])
 async def health_check():
-    """Detailed health check"""
+    """Detailed health check including database connectivity"""
+    from app.core.supabase import supabase_admin
+    
+    db_status = "unknown"
+    db_shoe_count = 0
+    
+    try:
+        # Test database connectivity
+        response = supabase_admin.table("shoes").select("*", count="exact").limit(1).execute()
+        db_status = "connected"
+        db_shoe_count = response.count or 0
+    except Exception as e:
+        db_status = f"error: {str(e)}"
+    
     return {
-        "status": "healthy",
-        "database": "connected",  # TODO: Add actual DB health check
+        "status": "healthy" if db_status == "connected" else "degraded",
+        "database": db_status,
+        "shoe_count": db_shoe_count,
         "version": "0.1.0",
     }

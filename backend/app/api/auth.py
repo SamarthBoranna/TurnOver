@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, EmailStr
-from gotrue.errors import AuthApiError
+from typing import Optional
+from supabase_auth.errors import AuthApiError
 
 from app.core.supabase import supabase
 
@@ -34,11 +35,24 @@ class AuthTokenResponse(BaseModel):
     refresh_token: str
 
 
-@router.post("/signup", response_model=AuthTokenResponse, status_code=status.HTTP_201_CREATED)
+class SignUpResponse(BaseModel):
+    """Response model for sign up - may or may not include tokens depending on email confirmation"""
+    access_token: Optional[str] = None
+    token_type: str = "bearer"
+    expires_in: Optional[int] = None
+    refresh_token: Optional[str] = None
+    message: Optional[str] = None
+    requires_confirmation: bool = False
+
+
+@router.post("/signup", response_model=SignUpResponse, status_code=status.HTTP_201_CREATED)
 async def sign_up(request: SignUpRequest):
     """
     Register a new user with email and password.
     Creates a user in Supabase Auth and a profile in the profiles table.
+    
+    Note: If email confirmation is enabled in Supabase, the response will not
+    include tokens. The user must confirm their email first.
     """
     try:
         response = supabase.auth.sign_up({
@@ -58,19 +72,31 @@ async def sign_up(request: SignUpRequest):
                 detail="Failed to create user"
             )
         
-        # Note: Profile creation should be handled by a Supabase trigger
-        # or explicitly created here
+        # Check if email confirmation is required (session will be None)
+        if response.session is None:
+            return SignUpResponse(
+                message="Account created! Please check your email to confirm your account.",
+                requires_confirmation=True,
+            )
         
-        return AuthTokenResponse(
+        # Email confirmation disabled - return tokens immediately
+        return SignUpResponse(
             access_token=response.session.access_token,
             expires_in=response.session.expires_in,
             refresh_token=response.session.refresh_token,
         )
         
     except AuthApiError as e:
+        error_message = str(e)
+        # Check for common error patterns
+        if "already registered" in error_message.lower() or "already exists" in error_message.lower():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="An account with this email already exists"
+            )
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e)
+            detail=error_message
         )
 
 
@@ -86,6 +112,12 @@ async def sign_in(request: SignInRequest):
             "password": request.password,
         })
         
+        if response.session is None:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid email or password"
+            )
+        
         return AuthTokenResponse(
             access_token=response.session.access_token,
             expires_in=response.session.expires_in,
@@ -93,6 +125,12 @@ async def sign_in(request: SignInRequest):
         )
         
     except AuthApiError as e:
+        error_message = str(e).lower()
+        if "email not confirmed" in error_message:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Please confirm your email address before signing in"
+            )
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid email or password"
@@ -106,6 +144,12 @@ async def refresh_token(request: TokenRefreshRequest):
     """
     try:
         response = supabase.auth.refresh_session(request.refresh_token)
+        
+        if response.session is None:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid or expired refresh token"
+            )
         
         return AuthTokenResponse(
             access_token=response.session.access_token,

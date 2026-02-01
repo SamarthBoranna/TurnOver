@@ -1,18 +1,61 @@
+"use client"
+
 import Link from "next/link"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { ShoeCard } from "@/components/features/shoes/shoe-card"
 import { RecommendationCard } from "@/components/features/shoes/recommendation-card"
-import { mockUser, mockRotation, mockGraveyard, mockRecommendations } from "@/lib/data/mock-data"
-import { ArrowRight, RefreshCw, Archive, Sparkles, TrendingUp } from "lucide-react"
+import { useAuth } from "@/lib/auth"
+import { useRotation, useGraveyard, useRecommendations } from "@/hooks"
+import { ArrowRight, RefreshCw, Archive, Sparkles, TrendingUp, Loader2 } from "lucide-react"
 
 export default function DashboardPage() {
+  const { user } = useAuth()
+  const { rotation, isLoading: rotationLoading } = useRotation()
+  const { graveyard, isLoading: graveyardLoading } = useGraveyard()
+  const { recommendations, isLoading: recommendationsLoading } = useRecommendations(undefined, 3)
+
+  const isLoading = rotationLoading || graveyardLoading || recommendationsLoading
+
+  // Transform API data to frontend format for ShoeCard
+  const transformedRotation = rotation.map(shoe => ({
+    id: shoe.id,
+    brand: shoe.brand,
+    name: shoe.name,
+    category: shoe.category as "daily" | "workout" | "race",
+    tags: shoe.tags,
+    weight: shoe.weight,
+    drop: shoe.drop,
+    stackHeightHeel: shoe.stack_height_heel,
+    stackHeightForefoot: shoe.stack_height_forefoot,
+    imageUrl: shoe.image_url,
+    startDate: shoe.start_date,
+  }))
+
+  // Transform recommendations
+  const transformedRecommendations = recommendations.map(rec => ({
+    shoe: {
+      id: rec.shoe.id,
+      brand: rec.shoe.brand,
+      name: rec.shoe.name,
+      category: rec.shoe.category as "daily" | "workout" | "race",
+      tags: rec.shoe.tags,
+      weight: rec.shoe.weight,
+      drop: rec.shoe.drop,
+      stackHeightHeel: rec.shoe.stack_height_heel,
+      stackHeightForefoot: rec.shoe.stack_height_forefoot,
+      imageUrl: rec.shoe.image_url,
+    },
+    score: rec.score,
+    explanation: rec.explanation,
+  }))
+
   return (
     <div className="max-w-6xl mx-auto px-6 py-8">
       {/* Welcome */}
       <div className="mb-8">
         <h1 className="text-2xl font-semibold tracking-tight mb-1">
-          Welcome back, {mockUser.firstName}
+          Welcome back{user ? `, ${user.firstName}` : ''}
         </h1>
         <p className="text-muted-foreground">
           Here's an overview of your running shoe collection.
@@ -28,7 +71,11 @@ export default function DashboardPage() {
                 <RefreshCw className="w-4 h-4" />
               </div>
               <div>
-                <p className="text-2xl font-semibold">{mockRotation.length}</p>
+                {rotationLoading ? (
+                  <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+                ) : (
+                  <p className="text-2xl font-semibold">{rotation.length}</p>
+                )}
                 <p className="text-sm text-muted-foreground">Active Shoes</p>
               </div>
             </div>
@@ -42,7 +89,11 @@ export default function DashboardPage() {
                 <Archive className="w-4 h-4" />
               </div>
               <div>
-                <p className="text-2xl font-semibold">{mockGraveyard.length}</p>
+                {graveyardLoading ? (
+                  <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+                ) : (
+                  <p className="text-2xl font-semibold">{graveyard.length}</p>
+                )}
                 <p className="text-sm text-muted-foreground">Retired Shoes</p>
               </div>
             </div>
@@ -56,7 +107,11 @@ export default function DashboardPage() {
                 <Sparkles className="w-4 h-4" />
               </div>
               <div>
-                <p className="text-2xl font-semibold">{mockRecommendations.length}</p>
+                {recommendationsLoading ? (
+                  <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+                ) : (
+                  <p className="text-2xl font-semibold">{recommendations.length}</p>
+                )}
                 <p className="text-sm text-muted-foreground">Recommendations</p>
               </div>
             </div>
@@ -70,7 +125,7 @@ export default function DashboardPage() {
                 <TrendingUp className="w-4 h-4" />
               </div>
               <div>
-                <p className="text-2xl font-semibold">{mockUser.avgMilesPerWeek}</p>
+                <p className="text-2xl font-semibold">{user?.avgMilesPerWeek || 0}</p>
                 <p className="text-sm text-muted-foreground">Miles/Week</p>
               </div>
             </div>
@@ -91,11 +146,25 @@ export default function DashboardPage() {
             </Link>
           </Button>
         </div>
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {mockRotation.slice(0, 3).map((shoe) => (
-            <ShoeCard key={shoe.id} shoe={shoe} compact />
-          ))}
-        </div>
+        
+        {rotationLoading ? (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+          </div>
+        ) : transformedRotation.length === 0 ? (
+          <div className="border border-dashed border-border rounded-lg p-8 text-center">
+            <p className="text-muted-foreground mb-4">No shoes in your rotation yet.</p>
+            <Button asChild>
+              <Link href="/rotation">Add Your First Shoe</Link>
+            </Button>
+          </div>
+        ) : (
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {transformedRotation.slice(0, 3).map((shoe) => (
+              <ShoeCard key={shoe.id} shoe={shoe} compact />
+            ))}
+          </div>
+        )}
       </section>
 
       {/* Top Recommendation */}
@@ -111,7 +180,20 @@ export default function DashboardPage() {
             </Link>
           </Button>
         </div>
-        <RecommendationCard recommendation={mockRecommendations[0]} rank={1} />
+        
+        {recommendationsLoading ? (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+          </div>
+        ) : transformedRecommendations.length === 0 ? (
+          <div className="border border-dashed border-border rounded-lg p-8 text-center">
+            <p className="text-muted-foreground">
+              Rate more shoes in your graveyard to get personalized recommendations.
+            </p>
+          </div>
+        ) : (
+          <RecommendationCard recommendation={transformedRecommendations[0]} rank={1} />
+        )}
       </section>
     </div>
   )
