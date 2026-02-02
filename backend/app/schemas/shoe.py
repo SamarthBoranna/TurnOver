@@ -81,6 +81,7 @@ class RetiredShoeCreate(BaseModel):
 
 class RetiredShoeResponse(ShoeResponse):
     """Schema for retired shoe response"""
+    graveyard_id: str  # Unique ID of the graveyard entry (allows same shoe multiple times)
     retired_at: datetime
     rating: int
     review: Optional[str] = None

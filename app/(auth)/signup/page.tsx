@@ -50,17 +50,13 @@ export default function SignUpPage() {
     setIsSubmitting(true)
 
     try {
-      const result = await signUp(
+      await signUp(
         formData.email,
         formData.password,
         formData.firstName,
         formData.lastName
       )
-      
-      // If email confirmation is required, show the message
-      if (result.requiresConfirmation) {
-        setError(result.message || "Please check your email to confirm your account.")
-      }
+      // On success, the auth context automatically redirects to /dashboard
     } catch (err) {
       if (err instanceof ApiError) {
         setError(err.message)

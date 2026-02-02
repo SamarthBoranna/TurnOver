@@ -53,6 +53,7 @@ async def get_graveyard(
             shoe_data = item.get("shoes", {})
             retired_shoes.append(RetiredShoeResponse(
                 id=shoe_data.get("id"),
+                graveyard_id=item.get("id"),  # Unique graveyard entry ID
                 brand=shoe_data.get("brand"),
                 name=shoe_data.get("name"),
                 category=shoe_data.get("category"),
@@ -105,16 +106,8 @@ async def retire_shoe(
         
         shoe_data = rotation_response.data.get("shoes", {})
         
-        # Check if shoe is already in graveyard
-        existing = db.table("graveyard").select("id").eq(
-            "user_id", current_user.id
-        ).eq("shoe_id", retired_shoe.shoe_id).execute()
-        
-        if existing.data:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Shoe is already in your graveyard"
-            )
+        # Note: We allow the same shoe to be in graveyard multiple times
+        # (common for runners who buy the same shoe repeatedly)
         
         # Add to graveyard
         graveyard_data = {
@@ -142,6 +135,7 @@ async def retire_shoe(
         return ApiResponse(
             data=RetiredShoeResponse(
                 id=shoe_data.get("id"),
+                graveyard_id=graveyard_response.data[0].get("id"),  # Unique graveyard entry ID
                 brand=shoe_data.get("brand"),
                 name=shoe_data.get("name"),
                 category=shoe_data.get("category"),
@@ -170,9 +164,9 @@ async def retire_shoe(
         )
 
 
-@router.patch("/{shoe_id}", response_model=ApiResponse[RetiredShoeResponse])
+@router.patch("/{graveyard_id}", response_model=ApiResponse[RetiredShoeResponse])
 async def update_retired_shoe(
-    shoe_id: str,
+    graveyard_id: str,
     rating: Optional[int] = Query(None, ge=1, le=5),
     review: Optional[str] = None,
     miles_run: Optional[float] = Query(None, ge=0),
@@ -180,6 +174,7 @@ async def update_retired_shoe(
 ):
     """
     Update a retired shoe's rating, review, or miles.
+    Uses graveyard_id to uniquely identify the entry (same shoe can appear multiple times).
     """
     current_user, db = auth
     
@@ -200,18 +195,18 @@ async def update_retired_shoe(
         
         response = db.table("graveyard").update(update_data).eq(
             "user_id", current_user.id
-        ).eq("shoe_id", shoe_id).execute()
+        ).eq("id", graveyard_id).execute()
         
         if not response.data:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="Shoe not found in your graveyard"
+                detail="Entry not found in your graveyard"
             )
         
         # Fetch full shoe data
         full_response = db.table("graveyard").select(
             "*, shoes(*)"
-        ).eq("user_id", current_user.id).eq("shoe_id", shoe_id).single().execute()
+        ).eq("user_id", current_user.id).eq("id", graveyard_id).single().execute()
         
         item = full_response.data
         shoe_data = item.get("shoes", {})
@@ -219,6 +214,7 @@ async def update_retired_shoe(
         return ApiResponse(
             data=RetiredShoeResponse(
                 id=shoe_data.get("id"),
+                graveyard_id=item.get("id"),
                 brand=shoe_data.get("brand"),
                 name=shoe_data.get("name"),
                 category=shoe_data.get("category"),
@@ -247,25 +243,26 @@ async def update_retired_shoe(
         )
 
 
-@router.delete("/{shoe_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{graveyard_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_from_graveyard(
-    shoe_id: str,
+    graveyard_id: str,
     auth: Tuple[User, Client] = Depends(get_current_user_with_client)
 ):
     """
-    Remove a shoe from the graveyard permanently.
+    Remove an entry from the graveyard permanently.
+    Uses graveyard_id to uniquely identify the entry (same shoe can appear multiple times).
     """
     current_user, db = auth
     
     try:
         response = db.table("graveyard").delete().eq(
             "user_id", current_user.id
-        ).eq("shoe_id", shoe_id).execute()
+        ).eq("id", graveyard_id).execute()
         
         if not response.data:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="Shoe not found in your graveyard"
+                detail="Entry not found in your graveyard"
             )
         
     except HTTPException:
@@ -273,5 +270,5 @@ async def delete_from_graveyard(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to delete shoe from graveyard: {str(e)}"
+            detail=f"Failed to delete entry from graveyard: {str(e)}"
         )

@@ -7,13 +7,13 @@ import { ShoeCard } from "@/components/features/shoes/shoe-card"
 import { RecommendationCard } from "@/components/features/shoes/recommendation-card"
 import { useAuth } from "@/lib/auth"
 import { useRotation, useGraveyard, useRecommendations } from "@/hooks"
-import { ArrowRight, RefreshCw, Archive, Sparkles, TrendingUp, Loader2 } from "lucide-react"
+import { ArrowRight, RefreshCw, Archive, TrendingUp, Loader2 } from "lucide-react"
 
 export default function DashboardPage() {
   const { user } = useAuth()
   const { rotation, isLoading: rotationLoading } = useRotation()
   const { graveyard, isLoading: graveyardLoading } = useGraveyard()
-  const { recommendations, isLoading: recommendationsLoading } = useRecommendations(undefined, 3)
+  const { recommendations, isLoading: recommendationsLoading } = useRecommendations(undefined, 1)
 
   const isLoading = rotationLoading || graveyardLoading || recommendationsLoading
 
@@ -63,7 +63,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      <div className="grid sm:grid-cols-3 gap-4 mb-8">
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
@@ -95,24 +95,6 @@ export default function DashboardPage() {
                   <p className="text-2xl font-semibold">{graveyard.length}</p>
                 )}
                 <p className="text-sm text-muted-foreground">Retired Shoes</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-secondary flex items-center justify-center">
-                <Sparkles className="w-4 h-4" />
-              </div>
-              <div>
-                {recommendationsLoading ? (
-                  <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
-                ) : (
-                  <p className="text-2xl font-semibold">{recommendations.length}</p>
-                )}
-                <p className="text-sm text-muted-foreground">Recommendations</p>
               </div>
             </div>
           </CardContent>

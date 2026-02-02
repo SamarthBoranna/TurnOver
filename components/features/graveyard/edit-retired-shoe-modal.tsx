@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import {
   Dialog,
   DialogContent,
@@ -11,64 +11,78 @@ import {
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
-import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Input } from "@/components/ui/input"
 import { RatingStars } from "@/components/shared/rating-stars"
-import type { RotationShoe } from "@/lib/types"
 import { Loader2 } from "lucide-react"
 
-interface RetireShoeModalProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  shoe: RotationShoe
-  onRetire: (shoeId: string, rating: number, review: string, milesRun?: number) => void | Promise<void>
-  isLoading?: boolean
+interface RetiredShoe {
+  id: string
+  graveyard_id: string  // Unique ID of the graveyard entry
+  brand: string
+  name: string
+  rating: number
+  review?: string
+  miles_run?: number
+  image_url?: string
 }
 
-export function RetireShoeModal({
+interface EditRetiredShoeModalProps {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  shoe: RetiredShoe
+  onSave: (graveyardId: string, data: { rating?: number; review?: string; miles_run?: number }) => Promise<void>
+}
+
+export function EditRetiredShoeModal({
   open,
   onOpenChange,
   shoe,
-  onRetire,
-  isLoading = false,
-}: RetireShoeModalProps) {
-  const [rating, setRating] = useState(0)
-  const [review, setReview] = useState("")
-  const [milesRun, setMilesRun] = useState("")
+  onSave,
+}: EditRetiredShoeModalProps) {
+  const [rating, setRating] = useState(shoe.rating)
+  const [review, setReview] = useState(shoe.review || "")
+  const [milesRun, setMilesRun] = useState(shoe.miles_run?.toString() || "")
   const [isSubmitting, setIsSubmitting] = useState(false)
+
+  // Reset form when shoe changes or modal opens
+  useEffect(() => {
+    if (open) {
+      setRating(shoe.rating)
+      setReview(shoe.review || "")
+      setMilesRun(shoe.miles_run?.toString() || "")
+    }
+  }, [open, shoe])
 
   const handleSubmit = async () => {
     if (rating === 0) return
     setIsSubmitting(true)
     try {
-      const miles = milesRun ? parseInt(milesRun, 10) : undefined
-      await onRetire(shoe.id, rating, review, miles)
-      setRating(0)
-      setReview("")
-      setMilesRun("")
+      await onSave(shoe.graveyard_id, {
+        rating,
+        review: review || undefined,
+        miles_run: milesRun ? parseInt(milesRun, 10) : undefined,
+      })
+      onOpenChange(false)
+    } catch (error) {
+      console.error('Failed to save:', error)
     } finally {
       setIsSubmitting(false)
     }
   }
 
-  const handleClose = (open: boolean) => {
-    if (!open) {
-      setRating(0)
-      setReview("")
-      setMilesRun("")
-    }
-    onOpenChange(open)
-  }
-
-  const submitting = isLoading || isSubmitting
+  const hasChanges = 
+    rating !== shoe.rating || 
+    review !== (shoe.review || "") ||
+    milesRun !== (shoe.miles_run?.toString() || "")
 
   return (
-    <Dialog open={open} onOpenChange={handleClose}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Retire Shoe</DialogTitle>
+          <DialogTitle>Edit Retired Shoe</DialogTitle>
           <DialogDescription>
-            Move the {shoe.brand} {shoe.name} to your graveyard. A rating is required.
+            Update your rating and review for the {shoe.brand} {shoe.name}.
           </DialogDescription>
         </DialogHeader>
 
@@ -76,9 +90,9 @@ export function RetireShoeModal({
           {/* Shoe Preview */}
           <div className="flex items-center gap-4 p-4 bg-secondary/50 rounded-lg">
             <div className="w-16 h-16 bg-muted rounded-lg flex items-center justify-center text-xs text-muted-foreground overflow-hidden">
-              {shoe.imageUrl ? (
+              {shoe.image_url ? (
                 <img 
-                  src={shoe.imageUrl} 
+                  src={shoe.image_url} 
                   alt={shoe.brand}
                   className="h-full w-full object-cover"
                 />
@@ -121,7 +135,7 @@ export function RetireShoeModal({
               placeholder="e.g., 300"
               value={milesRun}
               onChange={(e) => setMilesRun(e.target.value)}
-              disabled={submitting}
+              disabled={isSubmitting}
             />
           </div>
 
@@ -134,23 +148,23 @@ export function RetireShoeModal({
               value={review}
               onChange={(e) => setReview(e.target.value)}
               rows={3}
-              disabled={submitting}
+              disabled={isSubmitting}
             />
           </div>
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => handleClose(false)} disabled={submitting}>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>
             Cancel
           </Button>
-          <Button onClick={handleSubmit} disabled={rating === 0 || submitting}>
-            {submitting ? (
+          <Button onClick={handleSubmit} disabled={rating === 0 || isSubmitting || !hasChanges}>
+            {isSubmitting ? (
               <>
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Retiring...
+                Saving...
               </>
             ) : (
-              "Retire Shoe"
+              "Save Changes"
             )}
           </Button>
         </DialogFooter>

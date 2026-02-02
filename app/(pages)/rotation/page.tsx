@@ -77,13 +77,14 @@ export default function RotationPage() {
     }
   }
 
-  const handleRetireShoe = async (shoeId: string, rating: number, review: string) => {
+  const handleRetireShoe = async (shoeId: string, rating: number, review: string, milesRun?: number) => {
     setIsSubmitting(true)
     try {
       await retireShoe({
         shoe_id: shoeId,
         rating,
         review: review || undefined,
+        miles_run: milesRun,
       })
       setRetireModalOpen(false)
       setSelectedShoe(null)
