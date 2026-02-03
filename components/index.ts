@@ -11,6 +11,7 @@ export { RecommendationCard } from "./features/shoes/recommendation-card"
 // Feature components - Rotation
 export { AddShoeModal } from "./features/rotation/add-shoe-modal"
 export { RetireShoeModal } from "./features/rotation/retire-shoe-modal"
+export { DeleteShoeModal } from "./features/rotation/delete-shoe-modal"
 
 // Shared components
 export { RatingStars } from "./shared/rating-stars"

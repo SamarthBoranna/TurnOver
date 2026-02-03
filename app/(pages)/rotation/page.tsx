@@ -5,9 +5,10 @@ import { Button } from "@/components/ui/button"
 import { ShoeCard } from "@/components/features/shoes/shoe-card"
 import { AddShoeModal } from "@/components/features/rotation/add-shoe-modal"
 import { RetireShoeModal } from "@/components/features/rotation/retire-shoe-modal"
+import { DeleteShoeModal } from "@/components/features/rotation/delete-shoe-modal"
 import { useRotation, useShoes, useGraveyard } from "@/hooks"
 import type { RotationShoe, Shoe } from "@/lib/types"
-import { Plus, Archive, Filter, Loader2 } from "lucide-react"
+import { Plus, Archive, Filter, Loader2, Trash2 } from "lucide-react"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -24,7 +25,9 @@ export default function RotationPage() {
   
   const [addModalOpen, setAddModalOpen] = useState(false)
   const [retireModalOpen, setRetireModalOpen] = useState(false)
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false)
   const [selectedShoe, setSelectedShoe] = useState<RotationShoe | null>(null)
+  const [shoeToDelete, setShoeToDelete] = useState<RotationShoe | null>(null)
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>("all")
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -100,6 +103,26 @@ export default function RotationPage() {
   const handleOpenRetireModal = (shoe: RotationShoe) => {
     setSelectedShoe(shoe)
     setRetireModalOpen(true)
+  }
+
+  const handleOpenDeleteModal = (shoe: RotationShoe) => {
+    setShoeToDelete(shoe)
+    setDeleteModalOpen(true)
+  }
+
+  const handleDeleteShoe = async () => {
+    if (!shoeToDelete) return
+    
+    setIsSubmitting(true)
+    try {
+      await removeFromRotation(shoeToDelete.id)
+      setDeleteModalOpen(false)
+      setShoeToDelete(null)
+    } catch (error) {
+      console.error('Failed to delete shoe:', error)
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   const categoryLabel = {
@@ -185,16 +208,28 @@ export default function RotationPage() {
                     year: "numeric",
                   })}
                 </p>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleOpenRetireModal(shoe)}
-                  className="text-muted-foreground hover:text-foreground"
-                  disabled={isSubmitting}
-                >
-                  <Archive className="w-4 h-4 mr-1" />
-                  Retire
-                </Button>
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleOpenDeleteModal(shoe)}
+                    className="text-muted-foreground hover:text-destructive"
+                    disabled={isSubmitting}
+                    title="Remove from rotation"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleOpenRetireModal(shoe)}
+                    className="text-muted-foreground hover:text-foreground"
+                    disabled={isSubmitting}
+                  >
+                    <Archive className="w-4 h-4 mr-1" />
+                    Retire
+                  </Button>
+                </div>
               </div>
             </ShoeCard>
           ))}
@@ -216,6 +251,16 @@ export default function RotationPage() {
           onOpenChange={setRetireModalOpen}
           shoe={selectedShoe}
           onRetire={handleRetireShoe}
+          isLoading={isSubmitting}
+        />
+      )}
+
+      {shoeToDelete && (
+        <DeleteShoeModal
+          open={deleteModalOpen}
+          onOpenChange={setDeleteModalOpen}
+          shoeName={`${shoeToDelete.brand} ${shoeToDelete.name}`}
+          onConfirm={handleDeleteShoe}
           isLoading={isSubmitting}
         />
       )}

@@ -26,6 +26,9 @@ class Settings(BaseSettings):
     # JWT (Supabase uses these internally, but we need for verification)
     JWT_SECRET: str = ""  # Supabase JWT secret (optional, for custom verification)
     
+    # External APIs
+    RAPIDAPI_KEY: str = ""  # RapidAPI key for shoe image fetching
+    
     @field_validator('CORS_ORIGINS', mode='before')
     @classmethod
     def parse_cors_origins(cls, v: Union[str, List[str]]) -> List[str]:

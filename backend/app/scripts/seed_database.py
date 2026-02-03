@@ -127,9 +127,6 @@ SHOES_DATA: List[Dict[str, Any]] = [
     {"brand": "HOKA", "name": "Mach X", "category": "workout", 
      "tags": ["responsive", "cushioned", "fast"], 
      "weight": 250, "drop": 5, "stack_height_heel": 37, "stack_height_forefoot": 32},
-    {"brand": "HOKA", "name": "Rocket X2", "category": "workout", 
-     "tags": ["responsive", "fast", "lightweight"], 
-     "weight": 219, "drop": 5, "stack_height_heel": 39, "stack_height_forefoot": 34},
     
     # New Balance
     {"brand": "New Balance", "name": "FuelCell Rebel v4", "category": "workout", 
