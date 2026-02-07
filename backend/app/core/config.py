@@ -21,6 +21,7 @@ class Settings(BaseSettings):
     CORS_ORIGINS: List[str] = [
         "http://localhost:3000",
         "http://127.0.0.1:3000",
+        "https://v0-turn-over.vercel.app",
     ]
     
     # JWT (Supabase uses these internally, but we need for verification)
