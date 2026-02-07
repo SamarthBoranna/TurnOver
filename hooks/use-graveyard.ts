@@ -12,10 +12,10 @@ interface UseGraveyardReturn {
   refetch: () => Promise<void>
   retireShoe: (data: RetireShoeRequest) => Promise<RetiredShoe | null>
   updateRetiredShoe: (
-    shoeId: string,
+    graveyardId: string,
     data: { rating?: number; review?: string; miles_run?: number }
   ) => Promise<RetiredShoe | null>
-  deleteFromGraveyard: (shoeId: string) => Promise<boolean>
+  deleteFromGraveyard: (graveyardId: string) => Promise<boolean>
 }
 
 export function useGraveyard(filters?: GraveyardFilters): UseGraveyardReturn {
@@ -127,8 +127,10 @@ export function useGraveyard(filters?: GraveyardFilters): UseGraveyardReturn {
         apiCache.set(cacheKey, newGraveyard)
         return newGraveyard
       })
-      // Also invalidate rotation cache since retiring affects it
+      // Invalidate rotation cache since retiring affects it
       apiCache.invalidatePrefix('rotation')
+      // Invalidate recommendations since new retired shoe can affect them
+      apiCache.invalidatePrefix('recommendations')
       return response.data
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to retire shoe'
@@ -138,15 +140,15 @@ export function useGraveyard(filters?: GraveyardFilters): UseGraveyardReturn {
   }, [token, cacheKey])
 
   const updateRetiredShoe = useCallback(async (
-    shoeId: string,
+    graveyardId: string,
     data: { rating?: number; review?: string; miles_run?: number }
   ): Promise<RetiredShoe | null> => {
     if (!token) return null
 
     try {
-      const response = await graveyardApi.updateRetiredShoe(token, shoeId, data)
+      const response = await graveyardApi.updateRetiredShoe(token, graveyardId, data)
       setGraveyard(prev => {
-        const newGraveyard = prev.map(s => s.id === shoeId ? response.data : s)
+        const newGraveyard = prev.map(s => s.graveyard_id === graveyardId ? response.data : s)
         apiCache.set(cacheKey, newGraveyard)
         return newGraveyard
       })
@@ -160,13 +162,13 @@ export function useGraveyard(filters?: GraveyardFilters): UseGraveyardReturn {
     }
   }, [token, cacheKey])
 
-  const deleteFromGraveyard = useCallback(async (shoeId: string): Promise<boolean> => {
+  const deleteFromGraveyard = useCallback(async (graveyardId: string): Promise<boolean> => {
     if (!token) return false
 
     try {
-      await graveyardApi.deleteFromGraveyard(token, shoeId)
+      await graveyardApi.deleteFromGraveyard(token, graveyardId)
       setGraveyard(prev => {
-        const newGraveyard = prev.filter(s => s.id !== shoeId)
+        const newGraveyard = prev.filter(s => s.graveyard_id !== graveyardId)
         apiCache.set(cacheKey, newGraveyard)
         return newGraveyard
       })

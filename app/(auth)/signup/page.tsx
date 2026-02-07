@@ -21,6 +21,7 @@ export default function SignUpPage() {
   })
   const [error, setError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [successMessage, setSuccessMessage] = useState<string | null>(null)
 
   const handleChange = (field: keyof typeof formData) => (
     e: React.ChangeEvent<HTMLInputElement>
@@ -57,10 +58,11 @@ export default function SignUpPage() {
         formData.lastName
       )
       
-      // If email confirmation is required, show the message
       if (result.requiresConfirmation) {
-        setError(result.message || "Please check your email to confirm your account.")
+        // Email confirmation required - show success message
+        setSuccessMessage(result.message || 'Please check your email to confirm your account.')
       }
+      // If no confirmation required, the auth context automatically redirects to /dashboard
     } catch (err) {
       if (err instanceof ApiError) {
         setError(err.message)
@@ -104,6 +106,13 @@ export default function SignUpPage() {
                 <div className="flex items-center gap-2 p-3 text-sm text-destructive bg-destructive/10 rounded-lg">
                   <AlertCircle className="w-4 h-4 shrink-0" />
                   <span>{error}</span>
+                </div>
+              )}
+              
+              {successMessage && (
+                <div className="flex items-center gap-2 p-3 text-sm text-green-600 bg-green-50 dark:bg-green-950 dark:text-green-400 rounded-lg">
+                  <Check className="w-4 h-4 shrink-0" />
+                  <span>{successMessage}</span>
                 </div>
               )}
 

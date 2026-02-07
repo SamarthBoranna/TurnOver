@@ -130,7 +130,7 @@ export default function RecommendationsPage() {
           <p className="text-sm font-medium mb-3">Based on your top-rated shoes:</p>
           <div className="flex flex-wrap gap-4">
             {topRatedShoes.map((shoe) => (
-              <div key={shoe.id} className="flex items-center gap-3">
+              <div key={shoe.graveyard_id} className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-muted rounded flex items-center justify-center text-xs text-muted-foreground overflow-hidden">
                   {shoe.image_url ? (
                     <img 

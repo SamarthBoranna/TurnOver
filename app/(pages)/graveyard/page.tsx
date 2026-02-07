@@ -6,22 +6,25 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { RatingStars } from "@/components/shared/rating-stars"
 import { TagPill } from "@/components/shared/tag-pill"
+import { EditRetiredShoeModal } from "@/components/features/graveyard/edit-retired-shoe-modal"
 import { useGraveyard } from "@/hooks"
-import { Filter, Loader2 } from "lucide-react"
+import { Filter, Loader2, Pencil } from "lucide-react"
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuCheckboxItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import type { RetiredShoe } from "@/lib/api/client"
 
 type CategoryFilter = "all" | "daily" | "workout" | "race"
 type SortOption = "rating" | "name" | "brand" | "retired_at"
 
 export default function GraveyardPage() {
-  const { graveyard, isLoading } = useGraveyard()
+  const { graveyard, isLoading, updateRetiredShoe } = useGraveyard()
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>("all")
   const [sortBy, setSortBy] = useState<SortOption>("rating")
+  const [editingShoe, setEditingShoe] = useState<RetiredShoe | null>(null)
 
   const categoryLabel = {
     all: "All Categories",
@@ -63,6 +66,18 @@ export default function GraveyardPage() {
     if (graveyard.length === 0) return 0
     return graveyard.reduce((sum, shoe) => sum + shoe.rating, 0) / graveyard.length
   }, [graveyard])
+
+  const handleRatingChange = async (graveyardId: string, newRating: number) => {
+    try {
+      await updateRetiredShoe(graveyardId, { rating: newRating })
+    } catch (error) {
+      console.error('Failed to update rating:', error)
+    }
+  }
+
+  const handleSaveEdit = async (graveyardId: string, data: { rating?: number; review?: string; miles_run?: number }) => {
+    await updateRetiredShoe(graveyardId, data)
+  }
 
   return (
     <div className="max-w-6xl mx-auto px-6 py-8">
@@ -137,7 +152,7 @@ export default function GraveyardPage() {
       ) : (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredGraveyard.map((shoe) => (
-            <Card key={shoe.id} className="overflow-hidden border border-border">
+            <Card key={shoe.graveyard_id} className="overflow-hidden border border-border">
               <div className="bg-muted h-40 flex items-center justify-center">
                 {shoe.image_url ? (
                   <img 
@@ -165,7 +180,12 @@ export default function GraveyardPage() {
                 </div>
 
                 <div className="flex items-center gap-3 mb-3">
-                  <RatingStars rating={shoe.rating} size="sm" />
+                  <RatingStars 
+                    rating={shoe.rating} 
+                    size="sm" 
+                    interactive
+                    onRatingChange={(newRating) => handleRatingChange(shoe.graveyard_id, newRating)}
+                  />
                   <span className="text-sm text-muted-foreground">
                     {shoe.rating}/5
                   </span>
@@ -185,7 +205,7 @@ export default function GraveyardPage() {
                   </div>
                 )}
 
-                <div className="border-t border-border pt-3 mt-3">
+                <div className="border-t border-border pt-3 mt-3 flex items-center justify-between">
                   <p className="text-xs text-muted-foreground">
                     Retired {new Date(shoe.retired_at).toLocaleDateString("en-US", {
                       month: "short",
@@ -194,11 +214,30 @@ export default function GraveyardPage() {
                     })}
                     {shoe.miles_run && ` · ${shoe.miles_run} miles`}
                   </p>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="h-8 w-8 p-0"
+                    onClick={() => setEditingShoe(shoe)}
+                  >
+                    <Pencil className="w-4 h-4" />
+                    <span className="sr-only">Edit</span>
+                  </Button>
                 </div>
               </CardContent>
             </Card>
           ))}
         </div>
+      )}
+
+      {/* Edit Modal */}
+      {editingShoe && (
+        <EditRetiredShoeModal
+          open={!!editingShoe}
+          onOpenChange={(open) => !open && setEditingShoe(null)}
+          shoe={editingShoe}
+          onSave={handleSaveEdit}
+        />
       )}
     </div>
   )
